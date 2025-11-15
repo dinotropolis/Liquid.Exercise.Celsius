@@ -1,0 +1,209 @@
+{%- assign css_class = section.settings.css_class -%}
+
+{%- assign width = section.settings.width -%}
+
+{%- assign animation = section.settings.animation | default: 'none' -%}
+
+
+
+{%- assign now_iso = 'now' | date: '%Y-%m-%d' -%}
+
+{%- assign release_date_raw = product.metafields.custom.release_date | default: product.published_at -%}
+
+{%- assign release_date_iso = release_date_raw | date: '%Y-%m-%d' -%}
+
+
+
+{%- assign preorder_flag = product.metafields.custom.preorder | default: false -%}
+
+
+
+{% liquid
+
+  assign selected_variant = product.selected_variant
+
+  if product.variants.size == 1 or settings.select_first_available_variant
+
+    assign selected_variant = product.selected_or_first_available_variant
+
+  endif
+
+%}
+
+
+
+<style>
+
+  .product-card { max-width: 980px; margin: 0 auto; }
+
+  {% if width == 'wide' %}
+
+    .product-card { max-width: 95%; }
+
+  {% endif %}
+
+  .price--sale { font-weight: bold; }
+
+</style>
+
+
+
+<section class="product-card is-width-{{ width }} {{ css_class }}"
+
+  {% if animation != 'none' %} data-scroll-class="{{ animation }}"{% endif %}>
+
+
+
+  <header class="product-header">
+
+    <h1 class="product-title">{{ product.title }}</h1>
+
+    <p class="product-subtitle">Released: {{ release_date_raw | date: '%d/%m/%Y' }}</p>
+
+  </header>
+
+
+
+  <div class="product-media">
+
+    {% if product.media.size > 0 %}
+
+      {% render 'product-gallery', product: product, enable_zoom: section.settings.enable_zoom %}
+
+    {% else %}
+
+      {% render 'product-gallery', product: product, enable_zoom: false %}
+
+    {% endif %}
+
+  </div>
+
+
+
+  <div class="product-pricing">
+
+    {% assign compare = selected_variant.compare_at_price %}
+
+    {% assign price = selected_variant.price %}
+
+    <p class="price">
+
+      <span>{{ price | money }}</span>
+
+      {% if compare > price %}
+
+        <span class="price--compare">{{ compare | money_with_currency }}</span>
+
+        <span class="price--sale">Save {{ compare | minus: price | money }}</span>
+
+      {% endif %}
+
+    </p>
+
+  </div>
+
+
+
+  <div class="product-badges">
+
+    {% if release_date_iso > now_iso %}
+
+      <span class="badge badge--new">Coming Soon</span>
+
+    {% elsif release_date_iso == now_iso %}
+
+      <span class="badge badge--today">Releases Today</span>
+
+    {% else %}
+
+      <span class="badge badge--launched">Launched</span>
+
+    {% endif %}
+
+
+
+    {% if preorder_flag == 'true' or product.tags contains 'preorder' %}
+
+      <span class="badge badge--preorder">Pre-Order</span>
+
+    {% endif %}
+
+  </div>
+
+
+
+  <div class="product-main">
+
+    {% render 'product-form',
+
+      product: product,
+
+      selected_variant: selected_variant,
+
+      enable_dynamic_checkout: section.settings.enable_dynamic_checkout
+
+    %}
+
+  </div>
+
+
+
+  <ul class="product-meta" role="list">
+
+    <li><strong>SKU:</strong> {{ selected_variant.sku }}</li>
+
+    <li><strong>Availability:</strong>
+
+      {% if selected_variant.available %}In stock{% else %}Out of stock{% endif %}
+
+    </li>
+
+    <li><strong>Published:</strong> {{ product.published_at | date: '%-m/%-d/%Y' }}</li>
+
+  </ul>
+
+
+
+  <script type="application/json" data-product-id="{{ product.id }}" data-hydrate>
+
+  {
+
+    "id": {{ product.id }},
+
+    "title": {{ product.title | json }},
+
+    "price": {{ selected_variant.price | json }},
+
+    "compare_at": {{ selected_variant.compare_at_price | json }},
+
+    "available": {{ selected_variant.available | json }},
+
+    "release_date_iso": {{ release_date_iso | json }},
+
+    "preorder": {{ preorder_flag | json }}
+
+  }
+
+  </script>
+
+
+
+  <script src="{{ 'product.js' | asset_url }}"></script>
+
+
+
+  {% assign models = product.media | where: 'media_type', 'model' %}
+
+  {% if models.size > 0 %}
+
+    <script>
+
+      window.ShopifyXR = window.ShopifyXR || function(){ (ShopifyXR.q = ShopifyXR.q || []).push(arguments) };
+
+      ShopifyXR('addModels', {{ models | json }});
+
+    </script>
+
+  {% endif %}
+
+</section>
